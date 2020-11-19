@@ -386,6 +386,5 @@
       "direct_transition": "Terminal",
       "referenced_by_attribute": "anemia"
     }
-  },
-  "gmf_version": 1
+  }
 }

@@ -49,10 +49,6 @@ public final class EncounterModule extends Module {
     this.name = "Encounter";
   }
 
-  public Module clone() {
-    return this;
-  }
-
   @Override
   public boolean process(Person person, long time) {
     if (!person.alive(time)) {
@@ -148,7 +144,7 @@ public final class EncounterModule extends Module {
     prov.incrementEncounters(type, year);
     encounter.provider = prov;
     // assign a clinician
-    encounter.clinician = prov.chooseClinicianList(specialty, person);
+    encounter.clinician = prov.chooseClinicianList(specialty, person.random);
     return encounter;
   }
 

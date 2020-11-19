@@ -927,6 +927,5 @@
       "submodule": "covid19/measurements_vitals",
       "direct_transition": "CBC"
     }
-  },
-  "gmf_version": 1
+  }
 }

@@ -14,9 +14,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.Serializable;
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystemNotFoundException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.spi.FileSystemProvider;
@@ -52,9 +50,7 @@ import org.mitre.synthea.world.agents.Person;
  * across the population, it is important that States are cloned before they are executed. 
  * This keeps the "master" copy of the module clean.
  */
-public class Module implements Cloneable, Serializable {
-
-  public static final Double GMF_VERSION = 1.0;
+public class Module implements Serializable {
 
   private static final Configuration JSON_PATH_CONFIG = Configuration.builder()
       .jsonProvider(new GsonJsonProvider())
@@ -79,7 +75,7 @@ public class Module implements Cloneable, Serializable {
       URI modulesURI = Module.class.getClassLoader().getResource("modules").toURI();
       fixPathFromJar(modulesURI);
       Path modulesPath = Paths.get(modulesURI);
-      submoduleCount = walkModuleTree(modulesPath, retVal, moduleOverrides, false);
+      submoduleCount = walkModuleTree(modulesPath, retVal, moduleOverrides);
     } catch (Exception e) {
       e.printStackTrace();
     }
@@ -107,10 +103,9 @@ public class Module implements Cloneable, Serializable {
   }
 
   private static int walkModuleTree(
-          Path modulesPath,
-          Map<String, ModuleSupplier> retVal, 
-          Properties overrides,
-          boolean localFiles)
+          Path modulesPath, Map<String, 
+          ModuleSupplier> retVal, 
+          Properties overrides)
           throws Exception {
     AtomicInteger submoduleCount = new AtomicInteger();
     Path basePath = modulesPath.getParent();
@@ -120,10 +115,9 @@ public class Module implements Cloneable, Serializable {
       if (submodule) {
         submoduleCount.getAndIncrement();
       }
-      Path loadPath = localFiles ? t : basePath.relativize(t);
       retVal.put(relativePath, new ModuleSupplier(submodule,
           relativePath,
-          () -> loadFile(loadPath, submodule, overrides, localFiles)));
+          () -> loadFile(basePath.relativize(t), submodule, overrides)));
     });
     return submoduleCount.get();
   }
@@ -140,8 +134,7 @@ public class Module implements Cloneable, Serializable {
     int originalModuleCount = modules.size();
     Properties moduleOverrides = getModuleOverrides();
     try {
-      submoduleCount = walkModuleTree(dir.toPath().toAbsolutePath(), modules,
-              moduleOverrides, true);
+      walkModuleTree(dir.toPath(), modules, moduleOverrides);
     } catch (Exception e) {
       e.printStackTrace();
     }
@@ -177,15 +170,13 @@ public class Module implements Cloneable, Serializable {
   public static Module loadFile(Path path, Path modulesFolder, Properties overrides)
          throws Exception {
     boolean submodule = !path.getParent().equals(modulesFolder);
-    return loadFile(path, submodule, overrides, false);
+    return loadFile(path, submodule, overrides);
   }
 
-  private static Module loadFile(Path path, boolean submodule, Properties overrides,
-          boolean localFiles) throws Exception {
+  private static Module loadFile(Path path, boolean submodule, Properties overrides)
+          throws Exception {
     System.out.format("Loading %s %s\n", submodule ? "submodule" : "module", path.toString());
-    String jsonString = localFiles
-            ? new String(Files.readAllBytes(path), StandardCharsets.UTF_8)
-            : Utilities.readResource(path.toString());
+    String jsonString = Utilities.readResource(path.toString());
     if (overrides != null) {
       jsonString = applyOverrides(jsonString, overrides, path.getFileName().toString());
     }
@@ -254,7 +245,6 @@ public class Module implements Cloneable, Serializable {
 
   public String name;
   public boolean submodule;
-  public Double gmfVersion;
   public List<String> remarks;
   private Map<String, State> states;
 
@@ -270,16 +260,6 @@ public class Module implements Cloneable, Serializable {
    */
   public Module(JsonObject definition, boolean submodule) throws Exception {
     name = String.format("%s Module", definition.get("name").getAsString());
-
-    if (definition.has("gmf_version")) {
-      this.gmfVersion = definition.get("gmf_version").getAsDouble();
-      if (this.gmfVersion > GMF_VERSION) {
-        throw new IllegalStateException(String.format("%s specifies GMF version %f in JSON, "
-            + "which is beyond the known GMF version of %f",
-            this.name, this.gmfVersion, GMF_VERSION));
-      }
-    }
-
     this.submodule = submodule;
     remarks = new ArrayList<String>();
     if (definition.has("remarks")) {
@@ -295,23 +275,6 @@ public class Module implements Cloneable, Serializable {
       State state = State.build(this, entry.getKey(), entry.getValue().getAsJsonObject());
       states.put(entry.getKey(), state);
     }
-  }
-
-  /**
-   * Clone this module. Never provide the original.
-   */
-  public Module clone() {
-    Module clone = new Module();
-    clone.name = this.name;
-    clone.submodule = this.submodule;
-    clone.remarks = this.remarks;
-    if (this.states != null) {
-      clone.states = new ConcurrentHashMap<String, State>();
-      for (String key : this.states.keySet()) {
-        clone.states.put(key, this.states.get(key).clone());
-      }
-    }
-    return clone;
   }
 
   /**
@@ -453,7 +416,7 @@ public class Module implements Cloneable, Serializable {
       if (fault != null) {
         throw new RuntimeException(fault);
       }
-      return module.clone();
+      return module;
     }
   }
 }

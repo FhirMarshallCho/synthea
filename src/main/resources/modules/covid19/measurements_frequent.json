@@ -217,6 +217,5 @@
       "direct_transition": "Terminal",
       "attribute": "covid19_procalcitonin"
     }
-  },
-  "gmf_version": 1
+  }
 }

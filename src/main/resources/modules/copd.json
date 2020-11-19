@@ -712,7 +712,7 @@
           "display": "FEV1/FVC"
         }
       ],
-      "direct_transition": "End_COPD_Followup_Enc2"
+      "direct_transition": "Loop_back_to_Living_with_COPD"
     },
     "Stage2_FEV_Result": {
       "type": "Observation",
@@ -785,7 +785,7 @@
               }
             ]
           },
-          "transition": "End_COPD_Followup_Enc1"
+          "transition": "Consider_Surgery"
         },
         {
           "transition": "Prescribe_Medication"
@@ -802,7 +802,7 @@
           "display": "60 ACTUAT Fluticasone propionate 0.25 MG/ACTUAT / salmeterol 0.05 MG/ACTUAT Dry Powder Inhaler"
         }
       ],
-      "direct_transition": "End_COPD_Followup_Enc1",
+      "direct_transition": "Consider_Surgery",
       "chronic": true
     },
     "Consider_Surgery": {
@@ -997,15 +997,6 @@
           "transition": "Living_with_COPD"
         }
       ]
-    },
-    "End_COPD_Followup_Enc2": {
-      "type": "EncounterEnd",
-      "direct_transition": "Loop_back_to_Living_with_COPD"
-    },
-    "End_COPD_Followup_Enc1": {
-      "type": "EncounterEnd",
-      "direct_transition": "Consider_Surgery"
     }
-  },
-  "gmf_version": 1
+  }
 }

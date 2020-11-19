@@ -1,3 +1,4 @@
+
 {
   "name": "Sinusitis",
   "states": {
@@ -508,6 +509,5 @@
       "type": "EncounterEnd",
       "direct_transition": "Chronic_Sinusitis_Continues"
     }
-  },
-  "gmf_version": 1
+  }
 }

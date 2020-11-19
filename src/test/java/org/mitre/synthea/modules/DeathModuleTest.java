@@ -36,7 +36,7 @@ public class DeathModuleTest {
 
     person.history = new LinkedList<>();
     Provider mock = Mockito.mock(Provider.class);
-    Mockito.when(mock.getResourceID()).thenReturn("Mock-UUID");
+    mock.uuid = "Mock-UUID";
     person.setProvider(EncounterType.AMBULATORY, mock);
     person.setProvider(EncounterType.WELLNESS, mock);
     person.setProvider(EncounterType.EMERGENCY, mock);

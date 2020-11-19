@@ -1,199 +1,121 @@
 package org.mitre.synthea.helpers;
 
 import static org.mitre.synthea.TestHelper.SNOMED_URI;
+import static org.mitre.synthea.TestHelper.fhirResponse;
+import static org.mitre.synthea.TestHelper.getR4FhirContext;
+import static org.mitre.synthea.TestHelper.getTxRecordingSource;
+import static org.mitre.synthea.TestHelper.isHttpRecordingEnabled;
+import static org.mitre.synthea.TestHelper.wiremockOptions;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.StringUtils;
+import com.github.tomakehurst.wiremock.client.WireMock;
+import com.github.tomakehurst.wiremock.junit.WireMockRule;
+import com.github.tomakehurst.wiremock.stubbing.StubMapping;
+import java.util.UUID;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-import org.junit.runner.RunWith;
 import org.mitre.synthea.world.concepts.HealthRecord.Code;
-import org.mockito.ArgumentMatchers;
-import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnitRunner;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestTemplate;
 
-@RunWith(MockitoJUnitRunner.class)
 public class RandomCodeGeneratorTest {
 
   private static final int SEED = 1234;
+  private static final String EXPAND_STUB_ID = "1b134e58-aabf-4b5c-baf7-cce2c4f593c7";
   private static final String VALUE_SET_URI = SNOMED_URI + "?fhir_vs=ecl/<<131148009";
-  private static final String PATH = "wiremock/RandomCodeGeneratorTest/__files/";
-  private final Code code = new Code("SNOMED-CT", "38341003", "Hypertension");
+
+  @Rule
+  public WireMockRule mockTerminologyService = new WireMockRule(wiremockOptions()
+      .usingFilesUnderDirectory("src/test/resources/wiremock/RandomCodeGeneratorTest"));
 
   @Rule
   public ExpectedException thrown = ExpectedException.none();
 
-  @Mock
-  private RestTemplate restTemplate;
-
+  /**
+   * Prepare for each test.
+   * @throws Exception on failure
+   */
   @Before
-  public void setup() {
-    RandomCodeGenerator.restTemplate = restTemplate;
+  public void setUp() {
+    TerminologyClient terminologyClient = getR4FhirContext()
+        .newRestfulClient(TerminologyClient.class, mockTerminologyService.baseUrl() + "/fhir");
+    RandomCodeGenerator.initialize(terminologyClient);
+    if (isHttpRecordingEnabled()) {
+      WireMock.startRecording(getTxRecordingSource());
+    }
   }
 
   @Test
   public void getCode() {
-    Mockito
-        .when(restTemplate.exchange(ArgumentMatchers.anyString(),
-            ArgumentMatchers.eq(HttpMethod.GET),
-            ArgumentMatchers.<HttpEntity<?>>any(),
-            ArgumentMatchers.<Class<String>>any()))
-        .thenReturn(new ResponseEntity<String>(getResponseToStub("codes.json"), HttpStatus.OK));
-
-    Code code = RandomCodeGenerator.getCode(VALUE_SET_URI, SEED, this.code);
-
+    Code code = RandomCodeGenerator.getCode(VALUE_SET_URI, SEED);
+    
     Assert.assertEquals(SNOMED_URI, code.system);
-    Assert.assertEquals("312858004", code.code);
-    Assert.assertEquals("Neonatal tracheobronchial haemorrhage", code.display);
+    Assert.assertEquals("403393000", code.code);
+    Assert.assertEquals("Stellate pseudoscar in senile purpura", code.display);
+  }
+
+  @Test
+  public void throwsWhenNotConfigured() {
+    thrown.expect(RuntimeException.class);
+    thrown.expectMessage(
+        "Unable to generate code from ValueSet URI: terminology service not configured");
+    
+    RandomCodeGenerator.reset();
+    RandomCodeGenerator.getCode(VALUE_SET_URI, SEED);
   }
 
   @Test
   public void throwsWhenNoExpansion() {
     thrown.expect(RuntimeException.class);
-    thrown.expectMessage("ValueSet does not contain expansion");
-    Mockito
-        .when(restTemplate.exchange(ArgumentMatchers.anyString(),
-            ArgumentMatchers.eq(HttpMethod.GET),
-            ArgumentMatchers.<HttpEntity<?>>any(),
-            ArgumentMatchers.<Class<String>>any()))
-        .thenReturn(new ResponseEntity<String>(getResponseToStub("noExpansion.ValueSet.json"),
-            HttpStatus.OK));
+    thrown.expectMessage("ValueSet expansion does not contain any codes");
+    editStubBody("noExpansion.ValueSet.json");
 
-    RandomCodeGenerator.getCode(VALUE_SET_URI, SEED, this.code);
+    RandomCodeGenerator.getCode(VALUE_SET_URI, SEED);
   }
 
   @Test
   public void throwsWhenNoTotal() {
     thrown.expect(RuntimeException.class);
     thrown.expectMessage("No total element in ValueSet expand result");
-    Mockito
-        .when(restTemplate.exchange(ArgumentMatchers.anyString(),
-            ArgumentMatchers.eq(HttpMethod.GET),
-            ArgumentMatchers.<HttpEntity<?>>any(),
-            ArgumentMatchers.<Class<String>>any()))
-        .thenReturn(new ResponseEntity<String>(getResponseToStub("noTotal.ValueSet.json"),
-            HttpStatus.OK));
+    editStubBody("noTotal.ValueSet.json");
 
-    RandomCodeGenerator.getCode(VALUE_SET_URI, SEED, this.code);
+    RandomCodeGenerator.getCode(VALUE_SET_URI, SEED);
   }
 
   @Test
   public void throwsWhenNoContains() {
     thrown.expect(RuntimeException.class);
     thrown.expectMessage("ValueSet expansion does not contain any codes");
-    Mockito
-        .when(restTemplate.exchange(ArgumentMatchers.anyString(),
-            ArgumentMatchers.eq(HttpMethod.GET),
-            ArgumentMatchers.<HttpEntity<?>>any(),
-            ArgumentMatchers.<Class<String>>any()))
-        .thenReturn(new ResponseEntity<String>(getResponseToStub("noContains.ValueSet.json"),
-            HttpStatus.OK));
+    editStubBody("noContains.ValueSet.json");
 
-    RandomCodeGenerator.getCode(VALUE_SET_URI, SEED, this.code);
+    RandomCodeGenerator.getCode(VALUE_SET_URI, SEED);
   }
 
   @Test
   public void throwsWhenMissingCodeElements() {
     thrown.expect(RuntimeException.class);
     thrown.expectMessage("ValueSet contains element does not contain system, code and display");
+    editStubBody("missingCodeElements.ValueSet.json");
 
-    Mockito
-        .when(restTemplate.exchange(ArgumentMatchers.anyString(),
-            ArgumentMatchers.eq(HttpMethod.GET),
-            ArgumentMatchers.<HttpEntity<?>>any(),
-            ArgumentMatchers.<Class<String>>any()))
-        .thenReturn(new ResponseEntity<String>(
-            getResponseToStub("missingCodeElements.ValueSet.json"), HttpStatus.OK));
-
-    RandomCodeGenerator.getCode(VALUE_SET_URI, SEED, this.code);
+    RandomCodeGenerator.getCode(VALUE_SET_URI, SEED);
   }
 
-  @Test
-  public void throwsWhenInvalidResponse() {
-    thrown.expect(RuntimeException.class);
-    thrown.expectMessage("JsonProcessingException while parsing valueSet response");
-
-    Mockito
-        .when(restTemplate.exchange(ArgumentMatchers.anyString(),
-            ArgumentMatchers.eq(HttpMethod.GET),
-            ArgumentMatchers.<HttpEntity<?>>any(),
-            ArgumentMatchers.<Class<String>>any()))
-        .thenReturn(new ResponseEntity<String>(
-            StringUtils.chop(getResponseToStub("noExpansion.ValueSet.json")),
-            HttpStatus.OK));
-
-    RandomCodeGenerator.getCode(VALUE_SET_URI, SEED, this.code);
-  }
-
-  @Test
-  public void throwsWhenRestClientFailed() {
-    thrown.expect(RestClientException.class);
-    thrown.expectMessage("RestClientException while fetching valueSet response");
-
-    Mockito
-        .when(restTemplate.exchange(ArgumentMatchers.anyString(),
-            ArgumentMatchers.eq(HttpMethod.GET),
-            ArgumentMatchers.<HttpEntity<?>>any(),
-            ArgumentMatchers.<Class<String>>any()))
-        .thenThrow(new RestClientException(
-            "RestClientException while fetching valueSet response"));
-
-    RandomCodeGenerator.getCode(VALUE_SET_URI, SEED, this.code);
-  }
-
-  @Test
-  public void filterCodesTest() {
-    Mockito
-        .when(restTemplate.exchange(ArgumentMatchers.anyString(),
-            ArgumentMatchers.eq(HttpMethod.GET),
-            ArgumentMatchers.<HttpEntity<?>>any(),
-            ArgumentMatchers.<Class<String>>any()))
-        .thenReturn(new ResponseEntity<String>(getResponseToStub("codes.json"), HttpStatus.OK));
-
-    Code code = RandomCodeGenerator.getCode(VALUE_SET_URI + "&filter=tracheobronchial",
-        SEED, this.code);
-
-    Assert.assertTrue("Verify filter", code.display.contains("tracheobronchial"));
-  }
-
-  @Test
-  public void invalidValueSetUrlTest() {
-    Code code = RandomCodeGenerator.getCode("", SEED, this.code);
-
-    Assert.assertEquals("SNOMED-CT", code.system);
-    Assert.assertEquals("38341003", code.code);
-    Assert.assertEquals("Hypertension", code.display);
-  }
-
+  /**
+   * Clean up after each test.
+   */
   @After
-  public void cleanup() {
-    RandomCodeGenerator.codeListCache.clear();
-    RandomCodeGenerator.restTemplate = null;
-  }
-
-  private String getResponseToStub(String body) {
-    ClassLoader classLoader = getClass().getClassLoader();
-    try (InputStream inputStream = classLoader.getResourceAsStream(PATH.concat(body))) {
-      return IOUtils.toString(inputStream, StandardCharsets.UTF_8);
-    } catch (IOException e) {
-      e.printStackTrace();
+  public void tearDown() {
+    if (isHttpRecordingEnabled()) {
+      WireMock.stopRecording();
     }
-    return null;
   }
 
+  private void editStubBody(String body) {
+    StubMapping stub = mockTerminologyService.getSingleStubMapping(UUID.fromString(EXPAND_STUB_ID));
+    stub.setResponse(fhirResponse().withBodyFile(body).build());
+    stub.setPersistent(false);
+    mockTerminologyService.editStubMapping(stub);
+  }
+  
 }

@@ -15,10 +15,9 @@ fi
 
 rev=$(git rev-parse --short HEAD)
 
-./gradlew graphviz javadoc
-# ./gradlew graphviz uberJar javadoc
-# mkdir -p output/build/libs
-# mv build/libs/*.jar output/build/libs
+./gradlew graphviz uberJar javadoc
+mkdir -p output/build/libs
+mv build/libs/*.jar output/build/libs
 mkdir -p output/build/javadoc
 mv build/docs/javadoc/* output/build/javadoc
 

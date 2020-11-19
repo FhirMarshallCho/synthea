@@ -38,22 +38,7 @@ public class RandomCollection<E> implements Serializable {
    * @return a random item from the collection weighted by the item weights.
    */
   public E next(Random random) {
-    return next(random.nextDouble() * total);
-  }
-
-  /**
-   * Select an item from the collection at random by the weight of the items.
-   * Selecting an item from one draw, does not remove the item from the collection
-   * for subsequent draws. In other words, an item can be selected repeatedly if
-   * the weights are severely imbalanced.
-   * @param random the random number generator.
-   * @return a random item from the collection weighted by the item weights.
-   */
-  public E next(RandomNumberGenerator random) {
-    return next(random.rand() * total);
-  }
-
-  private E next(double value) {
+    double value = random.nextDouble() * total;
     Entry<Double, E> entry = map.higherEntry(value);
     if (entry == null) {
       entry = map.lastEntry();

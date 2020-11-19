@@ -1,8 +1,8 @@
 package org.mitre.synthea.world.agents.behaviors;
 
 import java.util.List;
+import java.util.Random;
 
-import org.mitre.synthea.helpers.RandomNumberGenerator;
 import org.mitre.synthea.modules.HealthInsuranceModule;
 import org.mitre.synthea.world.agents.Payer;
 import org.mitre.synthea.world.agents.Person;
@@ -52,14 +52,15 @@ public interface IPayerFinder {
    * @param options the list of acceptable payer options that the person can recieve.
    * @return a random payer from the given list of options.
    */
-  public default Payer chooseRandomlyFromList(List<Payer> options, RandomNumberGenerator rand) {
+  public default Payer chooseRandomlyFromList(List<Payer> options) {
     if (options.isEmpty()) {
       return Payer.noInsurance;
     } else if (options.size() == 1) {
       return options.get(0);
     } else {
       // There are a few equally good options, pick one randomly.
-      return options.get(rand.randInt(options.size()));
+      Random r = new Random();
+      return options.get(r.nextInt(options.size()));
     }
   }
 }

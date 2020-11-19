@@ -77,6 +77,5 @@
       "type": "EncounterEnd",
       "direct_transition": "Terminal"
     }
-  },
-  "gmf_version": 1
+  }
 }

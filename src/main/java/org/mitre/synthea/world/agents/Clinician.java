@@ -117,6 +117,10 @@ public class Clinician implements Serializable, QuadTreeElement {
   public int getEncounterCount() {
     return encounters;
   }
+  
+  public int randInt() {
+    return random.nextInt();
+  }
 
   public int randInt(int bound) {
     return random.nextInt(bound);

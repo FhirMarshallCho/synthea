@@ -344,6 +344,5 @@
       "direct_transition": "Terminal",
       "medication_order": "Sufentanil"
     }
-  },
-  "gmf_version": 1
+  }
 }

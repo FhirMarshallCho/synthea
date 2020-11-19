@@ -722,7 +722,7 @@ public class CDWExporter {
     s.append(NEWLINE);
     write(s.toString(), spatientphone);
 
-    if (person.randBoolean()) {
+    if (person.random.nextBoolean()) {
       // Add an email address
       s.setLength(0);
       s.append(getNextKey(spatientphone)).append(',');
@@ -938,7 +938,7 @@ public class CDWExporter {
     s.append(snomedSID).append(','); // snomed display is jammed into narrative.
     s.append(problemListSid).append(',');
     s.append(providerSID).append(','); // OrderingProviderSID
-    s.append(providerSID); // EncounterProviderSID
+    s.append(providerSID).append(','); // EncounterProviderSID
     s.append(NEWLINE);
     write(s.toString(), vdiagnosis);
   }
@@ -1001,6 +1001,7 @@ public class CDWExporter {
     s.append("1,"); // Verified
     s.append(iso8601Timestamp(allergyEntry.start)).append(',');
     s.append(providerSID).append(','); // VerifyingStaffSID
+    s.append(',');
     s.append(NEWLINE);
     write(s.toString(), allergy);
 
@@ -1290,7 +1291,7 @@ public class CDWExporter {
     s.append(','); // SupplementalO2
     s.append(locationSID).append(",");
     s.append(providerSID).append(",");
-    // s.append(""); // EnteredInErrorFlag
+    s.append(","); // EnteredInErrorFlag
     s.append(NEWLINE);
     write(s.toString(), vitalSign);
   }

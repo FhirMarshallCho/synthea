@@ -22,7 +22,6 @@ import org.hl7.fhir.r4.model.IntegerType;
 import org.hl7.fhir.r4.model.Organization;
 
 import org.mitre.synthea.helpers.Config;
-import org.mitre.synthea.helpers.RandomNumberGenerator;
 import org.mitre.synthea.world.agents.Provider;
 
 public abstract class HospitalExporterR4 {
@@ -34,12 +33,12 @@ public abstract class HospitalExporterR4 {
   /**
    * Export the hospital in FHIR R4 format.
    */
-  public static void export(RandomNumberGenerator rand, long stop) {
-    if (Config.getAsBoolean("exporter.hospital.fhir.export")) {
+  public static void export(long stop) {
+    if (Boolean.parseBoolean(Config.get("exporter.hospital.fhir.export"))) {
 
       Bundle bundle = new Bundle();
-      if (Config.getAsBoolean("exporter.fhir.transaction_bundle")) {
-        bundle.setType(BundleType.BATCH);
+      if (Boolean.parseBoolean(Config.get("exporter.fhir.transaction_bundle"))) {
+        bundle.setType(BundleType.TRANSACTION);
       } else {
         bundle.setType(BundleType.COLLECTION);
       }
@@ -49,7 +48,7 @@ public abstract class HospitalExporterR4 {
         int totalEncounters = utilization.column(Provider.ENCOUNTERS).values().stream()
             .mapToInt(ai -> ai.get()).sum();
         if (totalEncounters > 0) {
-          BundleEntryComponent entry = FhirR4.provider(rand, bundle, h);
+          BundleEntryComponent entry = FhirR4.provider(bundle, h);
           addHospitalExtensions(h, (Organization) entry.getResource());
         }
       }

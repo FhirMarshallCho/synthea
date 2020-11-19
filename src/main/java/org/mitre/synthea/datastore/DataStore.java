@@ -9,6 +9,7 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.mitre.synthea.helpers.Utilities;
@@ -282,7 +283,7 @@ public class DataStore {
       stmt.executeBatch();
 
       for (Encounter encounter : p.record.encounters) {
-        String encounterID = p.randUUID().toString();
+        String encounterID = UUID.randomUUID().toString();
 
         String providerID = null;
 
@@ -342,7 +343,7 @@ public class DataStore {
         }
 
         for (Report report : encounter.reports) {
-          String reportID = p.randUUID().toString();
+          String reportID = UUID.randomUUID().toString();
 
           // CREATE TABLE IF NOT EXISTS REPORT (id varchar, person_id varchar, encounter_id varchar,
           // name varchar, type varchar, start bigint, code varchar, display varchar, system
@@ -474,7 +475,7 @@ public class DataStore {
               "INSERT INTO MEDICATION "
               + "(id, person_id, provider_id, name, type, start, stop, code, display, system) "
               + "VALUES (?,?,?,?,?,?,?,?,?,?);");
-          String medicationID = p.randUUID().toString();
+          String medicationID = UUID.randomUUID().toString();
           stmt.setString(1, medicationID);
           stmt.setString(2, personID);
           stmt.setString(3, providerID);
@@ -500,7 +501,7 @@ public class DataStore {
               "INSERT INTO CLAIM "
               + "(id, person_id, encounter_id, medication_id, time, cost) "
               + "VALUES (?,?,?,?,?,?)");
-          stmt.setString(1, p.randUUID().toString());
+          stmt.setString(1, UUID.randomUUID().toString());
           stmt.setString(2, personID);
           stmt.setString(3, encounterID);
           stmt.setString(4, medicationID);
@@ -543,7 +544,7 @@ public class DataStore {
               "INSERT INTO careplan "
               + "(id, person_id, provider_id, name, type, start, stop, code, display, system) "
               + "VALUES (?,?,?,?,?,?,?,?,?,?);");
-          stmt.setString(1, p.randUUID().toString());
+          stmt.setString(1, UUID.randomUUID().toString());
           stmt.setString(2, personID);
           if (encounter.provider == null) {
             stmt.setString(3, null);
@@ -579,7 +580,7 @@ public class DataStore {
               + "(id, uid, person_id, encounter_id, start, modality_code, modality_display, "
               + "modality_system, bodysite_code, bodysite_display, bodysite_system, sop_class) "
               + "VALUES (?,?,?,?,?,?,?,?,?,?,?,?);");
-          stmt.setString(1, p.randUUID().toString());
+          stmt.setString(1, UUID.randomUUID().toString());
           stmt.setString(2, imagingStudy.dicomUid);
           stmt.setString(3, personID);
           stmt.setString(4, encounterID);
@@ -607,7 +608,7 @@ public class DataStore {
             "INSERT INTO CLAIM "
             + "(id, person_id, encounter_id, medication_id, time, cost) "
             + "VALUES (?,?,?,?,?,?)");
-        stmt.setString(1, p.randUUID().toString());
+        stmt.setString(1, UUID.randomUUID().toString());
         stmt.setString(2, personID);
         stmt.setString(3, encounterID);
         stmt.setString(4, null);

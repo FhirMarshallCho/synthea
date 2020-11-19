@@ -35,11 +35,11 @@ public abstract class FhirPractitionerExporterStu3 {
    * Export the practitioner in FHIR STU3 format.
    */
   public static void export(long stop) {
-    if (Config.getAsBoolean("exporter.practitioner.fhir_stu3.export")) {
+    if (Boolean.parseBoolean(Config.get("exporter.practitioner.fhir_stu3.export"))) {
 
       Bundle bundle = new Bundle();
-      if (Config.getAsBoolean("exporter.fhir.transaction_bundle")) {
-        bundle.setType(BundleType.BATCH);
+      if (Boolean.parseBoolean(Config.get("exporter.fhir.transaction_bundle"))) {
+        bundle.setType(BundleType.TRANSACTION);
       } else {
         bundle.setType(BundleType.COLLECTION);
       }

@@ -19,9 +19,9 @@ import ca.uhn.fhir.model.dstu2.composite.CodingDt;
 import ca.uhn.fhir.model.dstu2.resource.Bundle.Entry;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.junit.WireMockRule;
-
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
@@ -29,7 +29,6 @@ import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -38,7 +37,6 @@ import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
-
 import org.hl7.fhir.dstu3.model.Bundle;
 import org.hl7.fhir.dstu3.model.Bundle.BundleEntryComponent;
 import org.hl7.fhir.dstu3.model.CodeableConcept;
@@ -52,6 +50,7 @@ import org.mitre.synthea.TestHelper;
 import org.mitre.synthea.engine.Generator;
 import org.mitre.synthea.helpers.Config;
 import org.mitre.synthea.helpers.RandomCodeGenerator;
+import org.mitre.synthea.helpers.TerminologyClient;
 import org.mitre.synthea.world.agents.Payer;
 import org.mitre.synthea.world.agents.Person;
 import org.mitre.synthea.world.agents.Provider;
@@ -59,7 +58,6 @@ import org.mitre.synthea.world.concepts.HealthRecord.Code;
 import org.mitre.synthea.world.concepts.HealthRecord.Encounter;
 import org.mitre.synthea.world.concepts.HealthRecord.EncounterType;
 import org.mitre.synthea.world.geography.Location;
-import org.springframework.web.client.RestTemplate;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -91,17 +89,19 @@ public class CodeResolveAndExportTest {
    */
   @Before
   public void setUp() throws Exception {
+    TerminologyClient terminologyClient = getR4FhirContext()
+        .newRestfulClient(TerminologyClient.class, mockTerminologyService.baseUrl() + "/fhir");
+    RandomCodeGenerator.initialize(terminologyClient);
     if (isHttpRecordingEnabled()) {
       WireMock.startRecording(getTxRecordingSource());
     }
-    RandomCodeGenerator.setBaseUrl(mockTerminologyService.baseUrl() + "/fhir");
+
     TestHelper.exportOff();
     Config.set("exporter.ccda.export", "true");
     Config.set("exporter.fhir.export", "true");
     Config.set("exporter.fhir_stu3.export", "true");
     Config.set("exporter.fhir_dstu2.export", "true");
     Config.set("generate.terminology_service_url", mockTerminologyService.baseUrl() + "/fhir");
-    RandomCodeGenerator.restTemplate = new RestTemplate();
 
     person = new Person(12345L);
     time = new SimpleDateFormat("yyyy-MM-dd").parse("2013-06-10").getTime();
@@ -123,7 +123,7 @@ public class CodeResolveAndExportTest {
     TestHelper.loadTestProperties();
     Generator.DEFAULT_STATE = Config.get("test_state.default", "Massachusetts");
     Location location = new Location(Generator.DEFAULT_STATE, null);
-    location.assignPoint(person, location.randomCityName(person));
+    location.assignPoint(person, location.randomCityName(person.random));
     Provider.loadProviders(location, 1L);
 
     Payer.clear();
@@ -167,7 +167,7 @@ public class CodeResolveAndExportTest {
     verifyEncounterCodeCcda();
   }
 
-  private void verifyEncounterCodeStu3() throws IOException {
+  private void verifyEncounterCodeStu3() throws FileNotFoundException {
     InputStream inputStream = new FileInputStream(stu3OutputPath.toFile().getAbsolutePath());
     Bundle bundle = (Bundle) getStu3FhirContext().newJsonParser().parseResource(inputStream);
 
@@ -217,10 +217,9 @@ public class CodeResolveAndExportTest {
     assertEquals(LOINC_URI, observationValueCoding.getSystem());
     assertEquals(EXPECTED_VALUE_CODE, observationValueCoding.getCode());
     assertEquals(EXPECTED_VALUE_DISPLAY, observationValueCoding.getDisplay());
-    inputStream.close();
   }
 
-  private void verifyEncounterCodeR4() throws IOException {
+  private void verifyEncounterCodeR4() throws FileNotFoundException {
     InputStream inputStream = new FileInputStream(r4OutputPath.toFile().getAbsolutePath());
     org.hl7.fhir.r4.model.Bundle bundle = (org.hl7.fhir.r4.model.Bundle) getR4FhirContext()
         .newJsonParser().parseResource(inputStream);
@@ -277,10 +276,9 @@ public class CodeResolveAndExportTest {
     assertEquals(LOINC_URI, observationValueCoding.getSystem());
     assertEquals(EXPECTED_VALUE_CODE, observationValueCoding.getCode());
     assertEquals(EXPECTED_VALUE_DISPLAY, observationValueCoding.getDisplay());
-    inputStream.close();
   }
 
-  private void verifyEncounterCodeDstu2() throws IOException {
+  private void verifyEncounterCodeDstu2() throws FileNotFoundException {
     InputStream inputStream = new FileInputStream(dstu2OutputPath.toFile().getAbsolutePath());
     ca.uhn.fhir.model.dstu2.resource.Bundle bundle = 
         (ca.uhn.fhir.model.dstu2.resource.Bundle) getDstu2FhirContext().newJsonParser()
@@ -334,7 +332,6 @@ public class CodeResolveAndExportTest {
     assertEquals(LOINC_URI, observationValueCoding.getSystem());
     assertEquals(EXPECTED_VALUE_CODE, observationValueCoding.getCode());
     assertEquals(EXPECTED_VALUE_DISPLAY, observationValueCoding.getDisplay());
-    inputStream.close();
   }
 
   private void verifyEncounterCodeCcda()
@@ -402,7 +399,6 @@ public class CodeResolveAndExportTest {
     assertEquals(LOINC_OID, system);
     assertEquals(EXPECTED_VALUE_CODE, code);
     assertEquals(EXPECTED_VALUE_DISPLAY, display);
-    inputStream.close();
   }
 
   /**

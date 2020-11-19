@@ -295,6 +295,5 @@
     "OTC_Pain_Reliever_Terminal": {
       "type": "Terminal"
     }
-  },
-  "gmf_version": 1
+  }
 }

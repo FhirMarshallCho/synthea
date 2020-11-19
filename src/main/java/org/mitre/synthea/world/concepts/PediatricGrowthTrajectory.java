@@ -11,6 +11,7 @@ import java.util.Map;
 
 import org.apache.commons.math3.distribution.EnumeratedDistribution;
 import org.apache.commons.math3.distribution.NormalDistribution;
+import org.apache.commons.math3.random.JDKRandomGenerator;
 import org.mitre.synthea.helpers.Utilities;
 import org.mitre.synthea.world.agents.Person;
 
@@ -67,7 +68,7 @@ public class PediatricGrowthTrajectory implements Serializable {
       GrowthChart.loadCharts();
 
   private static Map<String, YearInformation> yearCorrelations = loadCorrelations();
-  private static NormalDistribution normalDistribution = new NormalDistribution(null, 0, 1);
+  private static NormalDistribution normalDistribution = new NormalDistribution();
   private static EnumeratedDistribution<NHANESSample> nhanesSamples =
       NHANESSample.loadDistribution();
 
@@ -88,15 +89,11 @@ public class PediatricGrowthTrajectory implements Serializable {
     public int ageInMonths;
     public long timeInSimulation;
     public double bmi;
-
-    public String toString() {
-      return String.format("{Age: %d, Time: %d, BMI: %f}", ageInMonths, timeInSimulation, bmi);
-    }
   }
 
   private NHANESSample initialSample;
   private List<Point> trajectory;
-  private long seed;
+
 
   /**
    * Starts a new pediatric growth trajectory. Selects a start BMI between 2 and 3 years old by
@@ -107,21 +104,14 @@ public class PediatricGrowthTrajectory implements Serializable {
    */
   public PediatricGrowthTrajectory(long personSeed, long birthTime) {
     // TODO: Make the selection sex specific
-    this.seed = personSeed;
-    this.initialSample = getSample(personSeed);
+    nhanesSamples.reseedRandomGenerator(personSeed);
+    this.initialSample = nhanesSamples.sample();
     this.trajectory = new LinkedList<Point>();
     Point p = new Point();
     p.ageInMonths = this.initialSample.agem;
     p.bmi = this.initialSample.bmi;
     p.timeInSimulation = birthTime + Utilities.convertTime("months", this.initialSample.agem);
     this.trajectory.add(p);
-  }
-
-  private static NHANESSample getSample(long personSeed) {
-    synchronized (nhanesSamples) {
-      nhanesSamples.reseedRandomGenerator(personSeed);
-      return nhanesSamples.sample();
-    }
   }
 
   /**
@@ -145,8 +135,10 @@ public class PediatricGrowthTrajectory implements Serializable {
    * consideration people at or above the 95th percentile, as the growth charts start to break down.
    * @param person to generate the new BMI for
    * @param time current time
+   * @param randomGenerator Apache Commons Math random thingy needed to sample a value
    */
-  public void generateNextYearBMI(Person person, long time) {
+  public void generateNextYearBMI(Person person, long time,
+                                    JDKRandomGenerator randomGenerator) {
     double age = person.ageInDecimalYears(time);
     double nextAgeYear = age + 1;
     String sex = (String) person.attributes.get(Person.GENDER);
@@ -158,7 +150,8 @@ public class PediatricGrowthTrajectory implements Serializable {
     double ezscore = extendedZScore(currentBMI, lastPoint.ageInMonths, sex, sigma);
     double mean = yi.correlation * ezscore + yi.diff;
     double sd = Math.sqrt(1 - Math.pow(yi.correlation, 2));
-    double nextYearZscore = (person.randGaussian() * sd) + mean;
+    NormalDistribution nextZDistro = new NormalDistribution(randomGenerator, mean, sd);
+    double nextYearZscore = nextZDistro.sample();
     double nextYearPercentile = GrowthChart.zscoreToPercentile(nextYearZscore);
     double nextPointBMI = percentileToBMI(nextYearPercentile, lastPoint.ageInMonths + 12,
         sex, sigma(sex, nextAgeYear));
@@ -261,15 +254,16 @@ public class PediatricGrowthTrajectory implements Serializable {
    * will happen before the person is 20 years old.
    * @param person to get the BMI for
    * @param time the time at which you want the BMI
+   * @param randomGenerator Apache Commons Math random thingy needed to sample a value
    * @return a BMI value
    */
-  public double currentBMI(Person person, long time) {
+  public double currentBMI(Person person, long time, JDKRandomGenerator randomGenerator) {
     Point lastPoint = tail();
     if (lastPoint.timeInSimulation <= time) {
       if (lastPoint.ageInMonths > NINETEEN_YEARS_IN_MONTHS) {
         return lastPoint.bmi;
       }
-      generateNextYearBMI(person, time);
+      generateNextYearBMI(person, time, randomGenerator);
     }
     Point previous = justBefore(time);
     Point next = justAfter(time);
@@ -278,18 +272,6 @@ public class PediatricGrowthTrajectory implements Serializable {
     double bmiDifference = next.bmi - previous.bmi;
 
     return previous.bmi + (bmiDifference * percentOfTimeBetweenPointsElapsed);
-  }
-
-  private static double cumulativeProbability(double value) {
-    synchronized (normalDistribution) {
-      return normalDistribution.cumulativeProbability(value);
-    }
-  }
-
-  private static double inverseCumulativeProbability(double value) {
-    synchronized (normalDistribution) {
-      return normalDistribution.inverseCumulativeProbability(value);
-    }
   }
 
   /**
@@ -310,7 +292,7 @@ public class PediatricGrowthTrajectory implements Serializable {
       double ninetyFifth = growthChart.get(GrowthChart.ChartType.BMI)
           .lookUp(ageInMonths, sex, 0.95);
       return ninetyFifth
-          + inverseCumulativeProbability((percentile - 0.9) * 10) * sigma;
+          + normalDistribution.inverseCumulativeProbability((percentile - 0.9) * 10) * sigma;
     }
   }
 
@@ -332,8 +314,8 @@ public class PediatricGrowthTrajectory implements Serializable {
       double ninetyFifth = growthChart.get(GrowthChart.ChartType.BMI)
           .lookUp(ageInMonths, sex, 0.95);
       double ebmiPercentile = 90 + 10
-          * cumulativeProbability((bmi - ninetyFifth) / sigma);
-      return inverseCumulativeProbability(ebmiPercentile / 100);
+          * normalDistribution.cumulativeProbability((bmi - ninetyFifth) / sigma);
+      return normalDistribution.inverseCumulativeProbability(ebmiPercentile / 100);
     }
   }
 

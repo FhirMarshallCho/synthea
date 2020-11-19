@@ -21,7 +21,6 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.mitre.synthea.helpers.Config;
-import org.mitre.synthea.helpers.RandomNumberGenerator;
 import org.mitre.synthea.helpers.SimpleCSV;
 import org.mitre.synthea.helpers.Utilities;
 import org.mitre.synthea.modules.LifecycleModule;
@@ -62,8 +61,7 @@ public class Provider implements QuadTreeElement, Serializable {
   private static IProviderFinder providerFinder = buildProviderFinder();
 
   public Map<String, Object> attributes;
-  private String uuid;
-  private String locationUuid;
+  public String uuid;
   public String id;
   public String name;
   private Location location;
@@ -119,9 +117,7 @@ public class Provider implements QuadTreeElement, Serializable {
    * Create a new Provider with no information.
    */
   public Provider() {
-    // the uuid fields are reinitialized by csvLineToProvider
     uuid = UUID.randomUUID().toString();
-    locationUuid = UUID.randomUUID().toString();
     attributes = new LinkedTreeMap<>();
     revenue = 0.0;
     utilization = HashBasedTable.create();
@@ -152,10 +148,6 @@ public class Provider implements QuadTreeElement, Serializable {
 
   public String getResourceID() {
     return uuid;
-  }
-
-  public String getResourceLocationID() {
-    return locationUuid;
   }
 
   public Map<String, Object> getAttributes() {
@@ -447,8 +439,7 @@ public class Provider implements QuadTreeElement, Serializable {
       long clinicianIdentifier, Provider provider) {
     Clinician clinician = null;
     try {
-      Person doc = new Person(clinicianIdentifier);
-      Demographics city = location.randomCity(doc);
+      Demographics city = location.randomCity(clinicianRand);
       Map<String, Object> out = new HashMap<>();
 
       String race = city.pickRace(clinicianRand);
@@ -473,8 +464,8 @@ public class Provider implements QuadTreeElement, Serializable {
       clinician.attributes.put(Person.ZIP, provider.zip);
       clinician.attributes.put(Person.COORDINATE, provider.coordinates);
 
-      String firstName = LifecycleModule.fakeFirstName(gender, language, doc);
-      String lastName = LifecycleModule.fakeLastName(language, doc);
+      String firstName = LifecycleModule.fakeFirstName(gender, language, clinician.random);
+      String lastName = LifecycleModule.fakeLastName(language, clinician.random);
 
       if (LifecycleModule.appendNumbersToNames) {
         firstName = LifecycleModule.addHash(firstName);
@@ -495,13 +486,13 @@ public class Provider implements QuadTreeElement, Serializable {
 
   /**
    * Randomly chooses a clinician out of a given clinician list.
-   * @param specialty - the specialty to choose from.
-   * @param rand - random number generator.
+   * @param specialty - the specialty to choose from
+   * @param random - random to help choose clinician
    * @return A clinician with the required specialty.
    */
-  public Clinician chooseClinicianList(String specialty, RandomNumberGenerator rand) {
+  public Clinician chooseClinicianList(String specialty, Random random) {
     ArrayList<Clinician> clinicians = this.clinicianMap.get(specialty);
-    Clinician doc = clinicians.get(rand.randInt(clinicians.size()));
+    Clinician doc = clinicians.get(random.nextInt(clinicians.size()));
     doc.incrementEncounters();
     return doc;
   }
@@ -521,8 +512,6 @@ public class Provider implements QuadTreeElement, Serializable {
     }
     String base = d.id + d.name;
     d.uuid = UUID.nameUUIDFromBytes(base.getBytes()).toString();
-    d.locationUuid = UUID.nameUUIDFromBytes(
-            new StringBuilder(base).reverse().toString().getBytes()).toString();
     d.address = line.remove("address");
     d.city = line.remove("city");
     d.state = line.remove("state");

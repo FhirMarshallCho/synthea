@@ -310,6 +310,5 @@
       "type": "EncounterEnd",
       "direct_transition": "Delay_Until_New_Replacement_Needed"
     }
-  },
-  "gmf_version": 1
+  }
 }

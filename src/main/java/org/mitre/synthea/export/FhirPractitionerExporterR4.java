@@ -21,7 +21,6 @@ import org.hl7.fhir.r4.model.Bundle.BundleType;
 import org.hl7.fhir.r4.model.IntegerType;
 import org.hl7.fhir.r4.model.Practitioner;
 import org.mitre.synthea.helpers.Config;
-import org.mitre.synthea.helpers.RandomNumberGenerator;
 import org.mitre.synthea.world.agents.Clinician;
 import org.mitre.synthea.world.agents.Provider;
 
@@ -35,12 +34,12 @@ public abstract class FhirPractitionerExporterR4 {
   /**
    * Export the practitioner in FHIR R4 format.
    */
-  public static void export(RandomNumberGenerator rand, long stop) {
-    if (Config.getAsBoolean("exporter.practitioner.fhir.export")) {
+  public static void export(long stop) {
+    if (Boolean.parseBoolean(Config.get("exporter.practitioner.fhir.export"))) {
 
       Bundle bundle = new Bundle();
-      if (Config.getAsBoolean("exporter.fhir.transaction_bundle")) {
-        bundle.setType(BundleType.BATCH);
+      if (Boolean.parseBoolean(Config.get("exporter.fhir.transaction_bundle"))) {
+        bundle.setType(BundleType.TRANSACTION);
       } else {
         bundle.setType(BundleType.COLLECTION);
       }
@@ -56,7 +55,7 @@ public abstract class FhirPractitionerExporterR4 {
             ArrayList<Clinician> docs = clinicians.get(specialty);
             for (Clinician doc : docs) {
               if (doc.getEncounterCount() > 0) {
-                BundleEntryComponent entry = FhirR4.practitioner(rand, bundle, doc);
+                BundleEntryComponent entry = FhirR4.practitioner(bundle, doc);
                 Practitioner practitioner = (Practitioner) entry.getResource();
                 practitioner.addExtension()
                   .setUrl(EXTENSION_URI)

@@ -98,6 +98,7 @@
       },
       "direct_transition": "Bronchitis_Symptom4"
     },
+
     "Bronchitis_Symptom4": {
       "type": "Symptom",
       "symptom": "Sore Throat",
@@ -107,6 +108,7 @@
       },
       "direct_transition": "Bronchitis_Symptom5"
     },
+
     "Bronchitis_Symptom5": {
       "type": "Symptom",
       "symptom": "Fatigue",
@@ -116,6 +118,7 @@
       },
       "direct_transition": "Bronchitis_Symptom6"
     },
+
     "Bronchitis_Symptom6": {
       "type": "Symptom",
       "symptom": "Fever",
@@ -125,6 +128,7 @@
       },
       "direct_transition": "Bronchitis_Symptom7"
     },
+
     "Bronchitis_Symptom7": {
       "type": "Symptom",
       "symptom": "Body Aches",
@@ -529,12 +533,7 @@
     "End_Bronchitis_CarePlan": {
       "type": "CarePlanEnd",
       "referenced_by_attribute": "bronchitis_careplan",
-      "direct_transition": "End_Wellness_Visit"
-    },
-    "End_Wellness_Visit": {
-      "type": "EncounterEnd",
       "direct_transition": "Potential_Infection"
     }
-  },
-  "gmf_version": 1
+  }
 }

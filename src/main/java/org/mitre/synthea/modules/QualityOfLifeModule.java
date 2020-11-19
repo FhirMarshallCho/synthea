@@ -36,10 +36,6 @@ public class QualityOfLifeModule extends Module {
     this.name = "Quality of Life";
   }
 
-  public Module clone() {
-    return this;
-  }
-
   @SuppressWarnings("unchecked")
   @Override
   public boolean process(Person person, long time) {

@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -49,7 +50,7 @@ public final class LifecycleModule extends Module {
   public static final String ADHERENCE_PROBABILITY = "adherence probability";
 
   public static final boolean appendNumbersToNames =
-      Config.getAsBoolean("generate.append_numbers_to_person_names", false);
+      Boolean.parseBoolean(Config.get("generate.append_numbers_to_person_names", "false"));
   private static final String COUNTRY_CODE = Config.get("generate.geography.country_code");
 
   private static RandomCollection<String> sexualOrientationData = loadSexualOrientationData();
@@ -94,10 +95,6 @@ public final class LifecycleModule extends Module {
     return soDistribution;
   }
 
-  public Module clone() {
-    return this;
-  }
-
   @Override
   public boolean process(Person person, long time) {
     if (!person.alive(time)) {
@@ -132,12 +129,12 @@ public final class LifecycleModule extends Module {
   public static void birth(Person person, long time) {
     Map<String, Object> attributes = person.attributes;
 
-    attributes.put(Person.ID, person.randUUID().toString());
+    attributes.put(Person.ID, UUID.randomUUID().toString());
     attributes.put(Person.BIRTHDATE, time);
     String gender = (String) attributes.get(Person.GENDER);
     String language = (String) attributes.get(Person.FIRST_LANGUAGE);
-    String firstName = fakeFirstName(gender, language, person);
-    String lastName = fakeLastName(language, person);
+    String firstName = fakeFirstName(gender, language, person.random);
+    String lastName = fakeLastName(language, person.random);
     if (appendNumbersToNames) {
       firstName = addHash(firstName);
       lastName = addHash(lastName);
@@ -146,15 +143,15 @@ public final class LifecycleModule extends Module {
     attributes.put(Person.LAST_NAME, lastName);
     attributes.put(Person.NAME, firstName + " " + lastName);
 
-    String motherFirstName = fakeFirstName("F", language, person);
-    String motherLastName = fakeLastName(language, person);
+    String motherFirstName = fakeFirstName("F", language, person.random);
+    String motherLastName = fakeLastName(language, person.random);
     if (appendNumbersToNames) {
       motherFirstName = addHash(motherFirstName);
       motherLastName = addHash(motherLastName);
     }
     attributes.put(Person.NAME_MOTHER, motherFirstName + " " + motherLastName);
     
-    String fatherFirstName = fakeFirstName("M", language, person);
+    String fatherFirstName = fakeFirstName("M", language, person.random);
     if (appendNumbersToNames) {
       fatherFirstName = addHash(fatherFirstName);
     }
@@ -183,10 +180,10 @@ public final class LifecycleModule extends Module {
       person.attributes.put(Person.ZIP, location.getZipCode(city, person));
       String[] birthPlace;
       if ("english".equalsIgnoreCase((String) attributes.get(Person.FIRST_LANGUAGE))) {
-        birthPlace = location.randomBirthPlace(person);
+        birthPlace = location.randomBirthPlace(person.random);
       } else {
         birthPlace = location.randomBirthplaceByLanguage(
-            person, (String) person.attributes.get(Person.FIRST_LANGUAGE));
+            person.random, (String) person.attributes.get(Person.FIRST_LANGUAGE));
       }
       attributes.put(Person.BIRTH_CITY, birthPlace[0]);
       attributes.put(Person.BIRTH_STATE, birthPlace[1]);
@@ -196,7 +193,7 @@ public final class LifecycleModule extends Module {
     }
     
     boolean hasStreetAddress2 = person.rand() < 0.5;
-    attributes.put(Person.ADDRESS, fakeAddress(hasStreetAddress2, person));
+    attributes.put(Person.ADDRESS, fakeAddress(hasStreetAddress2, person.random));
 
     attributes.put(Person.ACTIVE_WEIGHT_MANAGEMENT, false);
     // TODO: Why are the percentiles a vital sign? Sounds more like an attribute?
@@ -208,7 +205,7 @@ public final class LifecycleModule extends Module {
     person.attributes.put(Person.GROWTH_TRAJECTORY, pgt);
 
     // Temporarily generate a mother
-    Person mother = new Person(person.randLong());
+    Person mother = new Person(person.random.nextLong());
     mother.attributes.put(Person.GENDER, "F");
     mother.attributes.put("pregnant", true);
     mother.attributes.put(Person.RACE, person.attributes.get(Person.RACE));
@@ -235,7 +232,7 @@ public final class LifecycleModule extends Module {
     grow(person, time); // set initial height and weight from percentiles
     calculateVitalSigns(person, time);  // Set initial values for many vital signs.
 
-    String orientation = sexualOrientationData.next(person);
+    String orientation = sexualOrientationData.next(person.random);
     attributes.put(Person.SEXUAL_ORIENTATION, orientation);
 
     // Setup vital signs which follow the generator approach
@@ -266,11 +263,11 @@ public final class LifecycleModule extends Module {
    * Generate a first name appropriate for a given gender and language.
    * @param gender Gender of the name, "M" or "F"
    * @param language Origin language of the name, "english", "spanish"
-   * @param person person to generate a name for.
+   * @param random Random number generator to use.
    * @return First name.
    */
   @SuppressWarnings("unchecked")
-  public static String fakeFirstName(String gender, String language, Person person) {
+  public static String fakeFirstName(String gender, String language, Random random) {
     List<String> choices;
     if ("spanish".equalsIgnoreCase(language)) {
       choices = (List<String>) names.get("spanish." + gender);
@@ -278,17 +275,17 @@ public final class LifecycleModule extends Module {
       choices = (List<String>) names.get("english." + gender);
     }
     // pick a random item from the list
-    return choices.get(person.randInt(choices.size()));
+    return choices.get(random.nextInt(choices.size()));
   }
   
   /**
    * Generate a surname appropriate for a given language.
    * @param language Origin language of the name, "english", "spanish"
-   * @param person person to generate a name for.
+   * @param random Random number generator to use.
    * @return Surname or Family Name.
    */
   @SuppressWarnings("unchecked")
-  public static String fakeLastName(String language, Person person) {
+  public static String fakeLastName(String language, Random random) {
     List<String> choices;
     if ("spanish".equalsIgnoreCase(language)) {
       choices = (List<String>) names.get("spanish.family");
@@ -296,30 +293,30 @@ public final class LifecycleModule extends Module {
       choices = (List<String>) names.get("english.family");
     }
     // pick a random item from the list
-    return choices.get(person.randInt(choices.size()));
+    return choices.get(random.nextInt(choices.size()));
   }
 
   /**
    * Generate a Street Address.
    * @param includeLine2 Whether or not the address should have a second line,
    *     which can take the form of an apartment, unit, or suite number.
-   * @param person person to generate an address for.
+   * @param random Random number generator to use.
    * @return First name.
    */
   @SuppressWarnings("unchecked")
-  public static String fakeAddress(boolean includeLine2, Person person) {
-    int number = person.randInt(1000) + 100;
+  public static String fakeAddress(boolean includeLine2, Random random) {
+    int number = random.nextInt(1000) + 100;
     List<String> n = (List<String>)names.get("english.family");
     // for now just use family names as the street name. 
     // could expand with a few more but probably not worth it
-    String streetName = n.get(person.randInt(n.size()));
+    String streetName = n.get(random.nextInt(n.size()));
     List<String> a = (List<String>)names.get("street.type");
-    String streetType = a.get(person.randInt(a.size()));
+    String streetType = a.get(random.nextInt(a.size()));
     
     if (includeLine2) {
-      int addtlNum = person.randInt(100);
+      int addtlNum = random.nextInt(100);
       List<String> s = (List<String>)names.get("street.secondary");
-      String addtlType = s.get(person.randInt(s.size()));
+      String addtlType = s.get(random.nextInt(s.size()));
       return number + " " + streetName + " " + streetType + " " + addtlType + " " + addtlNum;
     } else {
       return number + " " + streetName + " " + streetType;
@@ -355,6 +352,7 @@ public final class LifecycleModule extends Module {
     int newAgeMos = person.ageInMonths(time);
     person.attributes.put(AGE, newAge);
     person.attributes.put(AGE_MONTHS, newAgeMos);
+
     switch (newAge) {
       case 16:
         // driver's license
@@ -406,7 +404,7 @@ public final class LifecycleModule extends Module {
               person.attributes.put(Person.MAIDEN_NAME, person.attributes.get(Person.LAST_NAME));
               String firstName = ((String) person.attributes.get(Person.FIRST_NAME));
               String language = (String) person.attributes.get(Person.FIRST_LANGUAGE);
-              String newLastName = fakeLastName(language, person);
+              String newLastName = fakeLastName(language, person.random);
               if (appendNumbersToNames) {
                 newLastName = addHash(newLastName);
               }
@@ -514,7 +512,7 @@ public final class LifecycleModule extends Module {
       weight = lookupGrowthChart("weight", gender, ageInMonths,
           person.getVitalSign(VitalSign.WEIGHT_PERCENTILE, time));
     } else if (age < 20) {
-      double currentBMI = pgt.currentBMI(person, time);
+      double currentBMI = pgt.currentBMI(person, time, person.random);
       double height = growthChart.get(GrowthChart.ChartType.HEIGHT).lookUp(ageInMonths,
           gender, heightPercentile);
       weight = BMI.weightForHeightAndBMI(height, currentBMI);
@@ -876,11 +874,11 @@ public final class LifecycleModule extends Module {
   }
 
   protected static boolean ENABLE_DEATH_BY_NATURAL_CAUSES =
-      Config.getAsBoolean("lifecycle.death_by_natural_causes");
+      Boolean.parseBoolean(Config.get("lifecycle.death_by_natural_causes"));
   protected static boolean ENABLE_DEATH_BY_LOSS_OF_CARE =
-      Config.getAsBoolean("lifecycle.death_by_loss_of_care");
+      Boolean.parseBoolean(Config.get("lifecycle.death_by_loss_of_care"));
   protected static boolean ENABLE_PHYSIOLOGY_GENERATORS =
-      Config.getAsBoolean("physiology.generators.enabled", false);
+      Boolean.parseBoolean(Config.get("physiology.generators.enabled", "false"));
 
   // Death From Natural Causes SNOMED Code
   private static final Code NATURAL_CAUSES = new Code("SNOMED-CT", "9855000",

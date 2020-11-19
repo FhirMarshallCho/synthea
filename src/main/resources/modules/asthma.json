@@ -436,7 +436,7 @@
           "display": "Asthma"
         }
       ],
-      "direct_transition": "End_Wellness_1"
+      "direct_transition": "Maintaining_Asthma"
     },
     "Potential_Asthma_Attack": {
       "type": "Simple",
@@ -595,19 +595,10 @@
     "End_Asthma_CarePlan": {
       "type": "CarePlanEnd",
       "referenced_by_attribute": "asthma_careplan",
-      "direct_transition": "End_Wellness_2"
+      "direct_transition": "Terminal"
     },
     "Terminal": {
       "type": "Terminal"
-    },
-    "End_Wellness_1": {
-      "type": "EncounterEnd",
-      "direct_transition": "Maintaining_Asthma"
-    },
-    "End_Wellness_2": {
-      "type": "EncounterEnd",
-      "direct_transition": "Terminal"
     }
-  },
-  "gmf_version": 1
+  }
 }

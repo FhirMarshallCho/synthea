@@ -1049,6 +1049,5 @@
       "reason": "covid19",
       "direct_transition": "Subtract Dose"
     }
-  },
-  "gmf_version": 1
+  }
 }

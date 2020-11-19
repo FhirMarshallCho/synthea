@@ -224,7 +224,8 @@ public abstract class Logic implements Serializable {
             // then look in the module history.
             last = (HealthRecord.Observation)
                 findEntryFromHistory(person, HealthRecord.Observation.class, code);
-            if (Config.getAsBoolean("exporter.split_records.duplicate_data", false)) {
+            if (Boolean.parseBoolean(
+                Config.get("exporter.split_records.duplicate_data", "false"))) {
               person.record.currentEncounter(time).observations.add(last);
             }
           }
@@ -447,7 +448,8 @@ public abstract class Logic implements Serializable {
             HealthRecord.Entry condition = (HealthRecord.Entry)
                 findEntryFromHistory(person, HealthRecord.Entry.class, code);
             if (condition != null && condition.stop == 0L) {
-              if (Config.getAsBoolean("exporter.split_records.duplicate_data", false)) {
+              if (Boolean.parseBoolean(
+                  Config.get("exporter.split_records.duplicate_data", "false"))) {
                 person.record.currentEncounter(time).conditions.add(condition);
               }
               return true;
@@ -486,7 +488,8 @@ public abstract class Logic implements Serializable {
             HealthRecord.Medication medication = (HealthRecord.Medication)
                 findEntryFromHistory(person, HealthRecord.Medication.class, code);
             if (medication != null && medication.stop == 0L) {
-              if (Config.getAsBoolean("exporter.split_records.duplicate_data", false)) {
+              if (Boolean.parseBoolean(
+                  Config.get("exporter.split_records.duplicate_data", "false"))) {
                 person.record.currentEncounter(time).medications.add(medication);
               }
               return true;
@@ -525,7 +528,8 @@ public abstract class Logic implements Serializable {
             HealthRecord.CarePlan carePlan = (HealthRecord.CarePlan)
                 findEntryFromHistory(person, HealthRecord.CarePlan.class, code);
             if (carePlan != null && carePlan.stop == 0L) {
-              if (Config.getAsBoolean("exporter.split_records.duplicate_data", false)) {
+              if (Boolean.parseBoolean(
+                  Config.get("exporter.split_records.duplicate_data", "false"))) {
                 person.record.currentEncounter(time).careplans.add(carePlan);
               }
               return true;

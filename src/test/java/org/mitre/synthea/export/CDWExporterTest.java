@@ -69,7 +69,6 @@ public class CDWExporterTest {
       // the CDW exporter doesn't use the SimpleCSV class to write the data,
       // so we can use it here for a level of validation.
       assertTrue(SimpleCSV.parse(cdwData).size() >= 0);
-      assertTrue(SimpleCSV.isValid(cdwData));
     }
   }
 }

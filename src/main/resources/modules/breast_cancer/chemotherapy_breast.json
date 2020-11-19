@@ -312,6 +312,5 @@
       "direct_transition": "End Current Chemo Treatment",
       "referenced_by_attribute": "chemoMed"
     }
-  },
-  "gmf_version": 1
+  }
 }

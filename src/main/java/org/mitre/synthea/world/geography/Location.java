@@ -15,7 +15,6 @@ import java.util.Random;
 
 import org.apache.commons.lang3.ArrayUtils;
 import org.mitre.synthea.helpers.Config;
-import org.mitre.synthea.helpers.RandomNumberGenerator;
 import org.mitre.synthea.helpers.SimpleCSV;
 import org.mitre.synthea.helpers.Utilities;
 import org.mitre.synthea.world.agents.Clinician;
@@ -125,14 +124,14 @@ public class Location implements Serializable {
    * If a city has more than one zip code, this picks a random one.
    * 
    * @param cityName Name of the city
-   * @param random Used for a source of repeatable randomness when selecting
-   *               a zipcode when multiple exist for a location
+   * @param person Used for a source of repeatable randomness when selecting a zipcode when multiple
+   *               exist for a location
    * @return a zip code for the given city
    */
-  public String getZipCode(String cityName, RandomNumberGenerator random) {
+  public String getZipCode(String cityName, Person person) {
     List<String> zipsForCity = getZipCodes(cityName);
     if (zipsForCity.size() > 1) {
-      int randomChoice = random.randInt(zipsForCity.size());
+      int randomChoice = person.randInt(zipsForCity.size());
       return zipsForCity.get(randomChoice);
     } else {
       return zipsForCity.get(0);
@@ -171,25 +170,7 @@ public class Location implements Serializable {
    * Pick the name of a random city from the current "world".
    * If only one city was selected, this will return that one city.
    * 
-   * @param random The source of randomness.
-   * @return Demographics of a random city.
-   */
-  public Demographics randomCity(RandomNumberGenerator random) {
-    if (city != null) {
-      // if we're only generating one city at a time, just use the largest entry for that one city
-      if (fixedCity == null) {
-        fixedCity = demographics.values().stream()
-          .filter(d -> d.city.equalsIgnoreCase(city))
-          .sorted().findFirst().get();
-      }
-      return fixedCity;
-    }
-    return demographics.get(randomCityId(random));
-  }
-
-  /**
-   * Pick the name of a random city from the current "world".
-   * @param random The source of randomness.
+   * @param random Source of randomness
    * @return Demographics of a random city.
    */
   public Demographics randomCity(Random random) {
@@ -204,37 +185,22 @@ public class Location implements Serializable {
     }
     return demographics.get(randomCityId(random));
   }
-
+  
   /**
    * Pick a random city name, weighted by population.
-   * @param random the source of randomness
+   * @param random Source of randomness
    * @return a city name
    */
-  public String randomCityName(RandomNumberGenerator random) {
+  public String randomCityName(Random random) {
     String cityId = randomCityId(random);
     return demographics.get(cityId).city;
   }
 
   /**
    * Pick a random city id, weighted by population.
-   * @param random the source of randomness
+   * @param random Source of randomness
    * @return a city id
    */
-  private String randomCityId(RandomNumberGenerator random) {
-    long targetPop = (long) (random.rand() * totalPopulation);
-
-    for (Map.Entry<String, Long> city : populationByCityId.entrySet()) {
-      targetPop -= city.getValue();
-
-      if (targetPop < 0) {
-        return city.getKey();
-      }
-    }
-
-    // should never happen
-    throw new RuntimeException("Unable to select a random city id.");
-  }  
-  
   private String randomCityId(Random random) {
     long targetPop = (long) (random.nextDouble() * totalPopulation);
 
@@ -252,10 +218,10 @@ public class Location implements Serializable {
 
   /**
    * Pick a random birth place, weighted by population.
-   * @param random the source of randomness
+   * @param random Source of randomness
    * @return Array of Strings: [city, state, country, "city, state, country"]
    */
-  public String[] randomBirthPlace(RandomNumberGenerator random) {
+  public String[] randomBirthPlace(Random random) {
     String[] birthPlace = new String[4];
     birthPlace[0] = randomCityName(random);
     birthPlace[1] = this.state;
@@ -270,17 +236,17 @@ public class Location implements Serializable {
    * In the case an language is not present the method returns the value from a call to
    * randomCityName().
    *
-   * @param random the source of randomness
+   * @param random the Random to base our city selection on
    * @param language the language to look for cities in
    * @return A String representing the place of birth
    */
-  public String[] randomBirthplaceByLanguage(RandomNumberGenerator random, String language) {
+  public String[] randomBirthplaceByLanguage(Random random, String language) {
     String[] birthPlace;
 
     List<String> cities = foreignPlacesOfBirth.get(language.toLowerCase());
     if (cities != null && cities.size() > 0) {
       int upperBound = cities.size();
-      String randomBirthPlace = cities.get(random.randInt(upperBound));
+      String randomBirthPlace = cities.get(random.nextInt(upperBound));
       String[] split = randomBirthPlace.split(",");
 
       // make sure we have exactly 3 elements (city, state, country_abbr)

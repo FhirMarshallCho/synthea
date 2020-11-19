@@ -32,22 +32,11 @@ public class ConceptsTest {
   
   @Test
   public void testConcepts() throws Exception {
-    List<String> concepts = Concepts.getConceptInventory(false);
+    List<String> concepts = Concepts.getConceptInventory();
     // just intended to ensure no exceptions or anything
     // make sure simpleCSV can parse it
     String csv = concepts.stream().collect(Collectors.joining("\n"));
     SimpleCSV.parse(csv);
-    assertTrue(SimpleCSV.isValid(csv));
-  }
-
-  @Test
-  public void testConceptsWithoutCosts() throws Exception {
-    List<String> concepts = Concepts.getConceptInventory(true);
-    // just intended to ensure no exceptions or anything
-    // make sure simpleCSV can parse it
-    String csv = concepts.stream().collect(Collectors.joining("\n"));
-    SimpleCSV.parse(csv);
-    assertTrue(SimpleCSV.isValid(csv));
   }
 
   @Test
